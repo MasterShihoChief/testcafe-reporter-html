@@ -42,23 +42,37 @@ module.exports = () => ({
   },
 
   compileErrors: function compileErrors(name, testRunInfo) {
-    const heading = `${this.currentTestNumber}. ${this.currentFixtureName} - ${name}`;
+    const heading = `${this.currentTestNumber}. ${
+      this.currentFixtureName
+    } - ${name}`;
 
-    this.report += this.indentString(`<h4 id="test-${this.currentTestNumber}">${heading}`);
+    this.report += this.indentString(
+      `<h4 id="test-${this.currentTestNumber}">${heading}`,
+    );
     if (testRunInfo.screenshots) {
       testRunInfo.screenshots.forEach((screenshot) => {
-        this.report += `&nbsp;&nbsp;<img class="thumbImg" src="data:image/png;base64, ${fs.readFileSync(screenshot.screenshotPath, { encoding: 'base64' })}"/>`;
+        this.report += `&nbsp;&nbsp;<img class="thumbImg" src="data:image/png;base64, ${fs.readFileSync(
+          screenshot.screenshotPath,
+          { encoding: 'base64' },
+        )}"/>`;
       });
     }
     this.report += '</h4>\n';
     testRunInfo.errs.forEach((error) => {
       this.report += this.indentString('<pre>');
-      this.report += this.escapeHtml(this.formatError(error, '')).replace('{', '&#123').replace('}', '&#125');
+      this.report += this.escapeHtml(this.formatError(error, ''))
+        .replace('{', '&#123')
+        .replace('}', '&#125');
       this.report += this.indentString('</pre>');
     });
   },
 
-  compileTestTable: function compileTestTable(name, testRunInfo, hasErr, result) {
+  compileTestTable: function compileTestTable(
+    name,
+    testRunInfo,
+    hasErr,
+    result,
+  ) {
     if (hasErr) {
       this.tableReports += this.indentString('<tr class="danger">\n');
     } else if (testRunInfo.skipped) {
@@ -87,14 +101,18 @@ module.exports = () => ({
 
     // Duration
     this.tableReports += this.indentString('<td>', 2);
-    this.tableReports += this.moment.duration(testRunInfo.durationMs).format('h[h] mm[m] ss[s]');
+    this.tableReports += this.moment
+      .duration(testRunInfo.durationMs)
+      .format('h[h] mm[m] ss[s]');
     this.tableReports += '</td>\n';
     // Result
     this.tableReports += this.indentString('<td>', 2);
     if (testRunInfo.skipped) {
       this.tableReports += 'skipped';
     } else if (result === 'failed') {
-      this.tableReports += `<a href="#test-${this.currentTestNumber}">failed</a>`;
+      this.tableReports += `<a href="#test-${
+        this.currentTestNumber
+      }">failed</a>`;
     } else {
       this.tableReports += result;
     }
@@ -106,7 +124,9 @@ module.exports = () => ({
 
   reportTaskDone: function reportTaskDone(endTime, passed /* , warnings */) {
     const durationMs = endTime - this.startTime;
-    const durationStr = this.moment.duration(durationMs).format('h[h] mm[m] ss[s]');
+    const durationStr = this.moment
+      .duration(durationMs)
+      .format('h[h] mm[m] ss[s]');
     const failed = this.testCount - passed;
 
     // Opening html
@@ -126,6 +146,10 @@ module.exports = () => ({
     <style>
       body {font-family: Arial, Helvetica, sans-serif;}
 
+      body {
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
       .thumbImg {
         width: 100%;
         max-width: 35px;
@@ -142,19 +166,23 @@ module.exports = () => ({
         position: fixed;
         z-index: 1;
         padding-top: 100px;
+        padding-bottom: 100px;
         left: 0;
         top: 0;
         width: 100%;
         height: 100%;
         overflow: auto;
-        background-color: rgba(0,0,0,0.7);
+        background-color: rgba(0, 0, 0, 0.7);
       }
 
       .modal-content {
-        margin: auto;
-        display: block;
-        width: 80%;
-        max-width: 700px;
+        width: 70%;
+        height: 70%;
+        max-width: 600px;
+        max-height: 1250px;
+        top: 0;
+        left: 32%;
+        position: fixed;
       }
 
       .closeModal {
@@ -167,17 +195,45 @@ module.exports = () => ({
         transition: 0.3s;
       }
 
+      .imageOne {
+        z-index: 0;
+      }
+      .imageTwo {
+        z-index: 1;
+        clip-path: polygon(50% 0, 100% 0, 100% 100%, 50% 100%);
+      }
+
       .closeModal:hover,
       .closeModal:focus {
         cursor: pointer;
       }
+
+      .slider {
+        margin: 600px auto 0;
+        max-width: 600px;
+
+        left: 0%;
+      }
     </style>
   </head>
   <body>
-    <div id="myModal" class="modal">
-      <span class="closeModal">&times;</span>
-      <img class="modal-content" id="modelImage">
-    </div>
+  <div id="myModal" class="modal">
+  <span class="closeModal">&times;</span>
+  <img class="modal-content imageOne" id="modelImageOne" />
+  <img class="modal-content imageTwo" id="modelImageTwo" />
+  <div>
+    <input
+      id="imgSlider"
+      type="range"
+      min="1"
+      max="100"
+      value="50"
+      class="slider"
+      onchange="sliderValue.value=value"
+    />
+    <output id="sliderValue">50</output>
+  </div>
+</div>
     <div class="container">
 `;
 
@@ -225,19 +281,34 @@ module.exports = () => ({
     html += `
     </div>
     <script>
-      const modal = document.getElementById('myModal');
-      const modalImage = document.getElementById("modelImage");
+    const modal = document.getElementById("myModal");
+    const modalImageOne = document.getElementById("modelImageOne");
+    const modalImageTwo = document.getElementById("modelImageTwo");
 
-      Array.from(document.getElementsByClassName("thumbImg")).forEach(function(el) {
-        el.onclick = function() {
-          modal.style.display = "block";
-          modalImage.src = this.src;
-        }
-      });
-      
-      document.getElementsByClassName("closeModal")[0].onclick = function() {
-        modal.style.display = "none";
-      }
+    Array.from(document.getElementsByClassName("thumbImg")).forEach(function(
+      el
+    ) {
+      el.onclick = function() {
+        modal.style.display = "block";
+        modalImageOne.src =
+          "http://203.104.209.55/kcs2/resources/ship/card/0045_8863.png";
+        modalImageTwo.src =
+          "http://203.104.209.55/kcs2/resources/ship/card/0144_5575.png";
+      };
+    });
+
+    document.getElementsByClassName("closeModal")[0].onclick = function() {
+      modal.style.display = "none";
+    };
+
+    var rangeInput = document.getElementById("imgSlider");
+
+    rangeInput.addEventListener("mousemove", function() {
+      console.log(this.value);
+      modalImageTwo.style = clip-path: polygon(${
+  this.value
+  }% 0, 100% 0, 100% 100%, ${this.value}% 100%);
+    });
     </script>
   </body>
 </html>`;
